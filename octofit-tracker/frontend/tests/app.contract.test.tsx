@@ -9,10 +9,10 @@ function renderRoute(route: string) {
 }
 
 const capabilities = [
-  { route: '/activities', empty: { activities: [] }, emptyText: /no activities/i },
-  { route: '/teams', empty: { teams: [] }, emptyText: /no teams/i },
-  { route: '/leaderboard', empty: { leaderboard: [] }, emptyText: /no (leaderboard|rankings|scores)/i },
-  { route: '/workouts', empty: { suggestions: [] }, emptyText: /no (workout|suggestions)/i },
+  { route: '/activities', endpoint: '/api/activities', empty: { activities: [] }, emptyText: /no activities/i, success: { activities: [{ type: 'run', minutes: 30, points: 30 }] }, successText: /run/i },
+  { route: '/teams', endpoint: '/api/teams', empty: { teams: [] }, emptyText: /no teams/i, success: { teams: [{ name: 'Octocats', members: ['Mona'] }] }, successText: /Octocats/i },
+  { route: '/leaderboard', endpoint: '/api/leaderboard', empty: { leaderboard: [] }, emptyText: /no (leaderboard|rankings|scores)/i, success: { leaderboard: [{ teamName: 'Octocats', totalPoints: 90, rank: 1 }] }, successText: /90/ },
+  { route: '/workouts', endpoint: '/api/workouts/suggestions/mona%40example.com', empty: { suggestions: [] }, emptyText: /no (workout|suggestions)/i, success: { suggestions: [{ title: 'Intervals', reason: 'Build endurance' }] }, successText: /Intervals/i },
 ];
 
 describe('OctoFit presentation contract', () => {
@@ -52,11 +52,18 @@ describe('OctoFit presentation contract', () => {
 
   it('requests workout suggestions for a specific user', async () => {
     renderRoute('/workouts');
-    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/workouts\/suggestions\/mona(%40|@)example\.com$/)));
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/workouts/suggestions/mona%40example.com'));
   });
 
   for (const capability of capabilities) {
     describe(capability.route, () => {
+      it('renders successful API results', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(capability.success), { status: 200 })));
+        renderRoute(capability.route);
+        await waitFor(() => expect(screen.getByText(capability.successText)).toBeInTheDocument());
+        expect(fetch).toHaveBeenCalledWith(capability.endpoint);
+      });
+
       it('announces a loading state while the API request is pending', () => {
         vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
         renderRoute(capability.route);

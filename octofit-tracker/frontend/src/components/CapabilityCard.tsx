@@ -5,7 +5,7 @@ type ApiItem = Record<string, unknown>;
 type Props = {
   title: string;
   description: string;
-  endpoint: string;
+  loadData: () => Promise<Record<string, ApiItem[]>>;
   collectionKey: string;
   emptyMessage: string;
   renderItem: (item: ApiItem) => ReactNode;
@@ -16,12 +16,12 @@ type RequestState =
   | { status: 'error'; message: string }
   | { status: 'success'; items: ApiItem[] };
 
-export function CapabilityCard({ title, description, endpoint, collectionKey, emptyMessage, renderItem }: Props) {
+export function CapabilityCard({ title, description, loadData, collectionKey, emptyMessage, renderItem }: Props) {
   const [state, setState] = useState<RequestState>({ status: 'loading' });
 
   useEffect(() => {
     let active = true;
-    getJson<Record<string, ApiItem[]>>(endpoint).then((response) => {
+    loadData().then((response) => {
       const items = response[collectionKey];
       if (!Array.isArray(items)) throw new Error(`Missing ${collectionKey} in API response`);
       if (active) setState({ status: 'success', items });
@@ -37,7 +37,7 @@ export function CapabilityCard({ title, description, endpoint, collectionKey, em
     return () => {
       active = false;
     };
-  }, [collectionKey, endpoint]);
+  }, [collectionKey, loadData]);
 
   return <section className="card h-100"><div className="card-body">
     <h2 className="h4">{title}</h2>
